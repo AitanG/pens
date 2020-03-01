@@ -4,6 +4,7 @@ from . import models
 import json
 
 # TODO: add method to each comment header
+# TODO: slugs don't take commas
 
 '''
 Helper method that validates a request and gets the request params.
@@ -67,18 +68,15 @@ def createPart(request, name):
 
 
 '''
-Helper method that recursively finds all parts used to create a parent assembly.
+Helper method that recursively finds all components used to create a parent assembly.
 
 '''
 def getChildrenOfAssembly(parentAssembly, aggregatedChildren):
-	childrenParts = [child for child in parentAssembly.children if child.componentType == "part"]
-	aggregatedChildren.update(childrenParts)
+	aggregatedChildren.update(parentAssembly.children)
 
-	if childrenParts != len(parentAssembly.children):
-		# Recursive case: not all children are parts
-		childrenAssemblies = [child for child in parentAssembly.children if child.componentType == "assembly"]
-		for child in childrenAssemblies:
-			getChildrenOfAssembly(childrenAssemblies, aggregatedChildren)
+	childrenAssemblies = [child for child in parentAssembly.children if child.componentType == "assembly"]
+	for child in childrenAssemblies:
+		getChildrenOfAssembly(child, aggregatedChildren)
 
 
 '''
@@ -86,10 +84,6 @@ Helper method that recursively finds all assemblies containing a component.
 
 '''
 def getAssembliesContaining(component, assembliesContaining):
-	if not component.parents:
-		# Base case: current component has no parents
-		return
-
 	assembliesContaining.update(component.parents)
 
 	for parent in component.parents:
@@ -107,8 +101,10 @@ delete a part (thereby also deleting the part from its parent assemblies)
 '''
 def part(request, name):
 	if request.method == "POST":
+		# This is a post request--create new part
 		return createPart(request, name)
 	elif request.method == "DELETE":
+		# This is a delete request--delete the part
 		return deletePart(request, name)
 	else:
 		return HttpResponseBadRequest()
@@ -126,6 +122,7 @@ def listParts(request):
 	if request.method != "GET":
 		return HttpResponseBadRequest()
 
+	# List parts
 	body = json.dumps(list(models.parts.keys()))
 	response = HttpResponse(body, content_type="application/json")
 	return response
@@ -143,13 +140,23 @@ def addPartsToPart(request, parentName, childrenNames):
 	if request.method != "POST":
 		return HttpResponseBadRequest()
 
+	# Validation on parent name
 	if parentName not in models.parts:
-		return HttpResponseBadRequest("The parent part does not exist.")
+		if parentName in models.assemblies:
+			return HttpResponseBadRequest("The specified parent part is already an assembly.")
+		else:
+			return HttpResponseBadRequest("The parent part does not exist.")
 
-	childNames = names.split(",")
+	# Validation on child names
+	childNames = childrenNames.split(",")
 	for childName in childNames:
 		if childName not in models.parts:
-			return HttpResponseBadRequest(f"The child part {childName} does not exist.")
+			if childName in models.assemblies:
+				return HttpResponseBadRequest(f"The specified child part {childName} is an assembly.")
+			else:
+				return HttpResponseBadRequest(f"The child part {childName} does not exist.")
+		if childName == parentName:
+			return HttpResponseBadRequest(f"An assembly cannot use itself as a part.")
 
 	# Convert parent part to an assembly
 	parentPart = models.parts[parentName]
@@ -179,6 +186,7 @@ def listOrphanParts(request):
 	if request.method != "GET":
 		return HttpResponseBadRequest()
 
+	# List orphan parts
 	orphanParts = [key for key, value in models.parts.items() if not value.parents]
 	body = json.dumps(orphanParts)
 	response = HttpResponse(body, content_type="application/json")
@@ -197,8 +205,9 @@ def listComponentParts(request):
 	if request.method != "GET":
 		return HttpResponseBadRequest()
 
-	orphanParts = [key for key, value in models.parts.items() if value.parents]
-	body = json.dumps(orphanParts)
+	# List component parts
+	componentParts = [key for key, value in models.parts.items() if value.parents]
+	body = json.dumps(componentParts)
 	response = HttpResponse(body, content_type="application/json")
 	return response
 
@@ -215,13 +224,16 @@ def listAssembliesContainingPart(request, name):
 	if request.method != "GET":
 		return HttpResponseBadRequest()
 
+	# Validation on part name
 	if name not in models.parts:
 		return HttpResponseBadRequest("The part does not exist.")
 
 	part = models.parts[name]
+
+	# Populate set of assemblies using recursive function call and return
 	assembliesContaining = set([])
 	getAssembliesContaining(part, assembliesContaining)
-	body = json.dumps(list(assembliesContaining))
+	body = json.dumps([assembly.name for assembly in assembliesContaining])
 	response = HttpResponse(body, content_type="application/json")
 	return response
 
@@ -239,8 +251,8 @@ def listAssemblies(request):
 	if request.method != "GET":
 		return HttpResponseBadRequest()
 
-	assemblies = [key for key, value in models.assemblies.items()]
-	body = json.dumps(assemblies)
+	# List assemblies
+	body = json.dumps(models.assemblies.keys())
 	response = HttpResponse(body, content_type="application/json")
 	return response
 
@@ -257,8 +269,9 @@ def listPens(request):
 	if request.method != "GET":
 		return HttpResponseBadRequest()
 
-	assemblies = [value for key, value in models.assemblies.items() if not value.parents]
-	body = json.dumps(assemblies)
+	# List top level assemblies
+	assemblyNames = [value.name for key, value in models.assemblies.items() if not value.parents]
+	body = json.dumps(assemblyNames)
 	response = HttpResponse(body, content_type="application/json")
 	return response
 
@@ -275,8 +288,9 @@ def listSubassemblies(request):
 	if request.method != "GET":
 		return HttpResponseBadRequest()
 
-	assemblies = [value for key, value in models.assemblies.items() if value.parents]
-	body = json.dumps(assemblies)
+	# List subassemblies
+	assemblyNames = [value.name for key, value in models.assemblies.items() if value.parents]
+	body = json.dumps(assemblyNames)
 	response = HttpResponse(body, content_type="application/json")
 	return response
 
@@ -293,13 +307,16 @@ def listChildrenOfAssembly(request, parentName):
 	if request.method != "GET":
 		return HttpResponseBadRequest()
 
-	if parentName not in models.parts:
-		return HttpResponseBadRequest("The parent part does not exist.")
+	# Validation on parent name
+	if parentName not in models.assemblies:
+		return HttpResponseBadRequest("The parent assembly does not exist.")
 
 	parentAssembly = models.assemblies[parentName]
+
+	# Populate set of children using recursive function call and return
 	children = set([])
 	getChildrenOfAssembly(parentAssembly, children)
-	body = json.dumps(list(children))
+	body = json.dumps([child.name for child in children])
 	response = HttpResponse(body, content_type="application/json")
 	return response
 
@@ -316,12 +333,14 @@ def listTopChildrenOfAssembly(request, parentName):
 	if request.method != "GET":
 		return HttpResponseBadRequest()
 
-	if parentName not in models.parts:
-		return HttpResponseBadRequest("The parent part does not exist.")
+	# Validation on parent name
+	if parentName not in models.assemblies:
+		return HttpResponseBadRequest("The parent assembly does not exist.")
 
+	# List children
 	parentAssembly = models.assemblies[parentName]
-	children = [child.name for child in parentAssembly.children]
-	body = json.dumps(children)
+	childNames = [child.name for child in parentAssembly.children]
+	body = json.dumps(childNames)
 	response = HttpResponse(body, content_type="application/json")
 	return response
 
@@ -338,12 +357,14 @@ def listPartsInAssembly(request, parentName):
 	if request.method != "GET":
 		return HttpResponseBadRequest()
 
+	# Validation on parent name
 	if parentName not in models.assemblies:
 		return HttpResponseBadRequest("The parent assembly does not exist.")
 
+	# List parts
 	parentAssembly = models.assemblies[parentName]
-	childParts = [child for child in parentPart.children if child.componentType == "part"]
-	body = json.dumps(children)
+	childNames = [child.name for child in parentAssembly.children if child.componentType == "part"]
+	body = json.dumps(childNames)
 	response = HttpResponse(body, content_type="application/json")
 	return response
 
@@ -360,21 +381,31 @@ def removePartsFromAssembly(request, parentName, childrenNames):
 	if request.method != "DELETE":
 		return HttpResponseBadRequest()
 
+	# Validation on parent name
 	if parentName not in models.assemblies:
-		return HttpResponseBadRequest("The parent assembly does not exist.")
+		if parentName in models.parts:
+			return HttpResponseBadRequest("The specified parent assembly is a part.")
+		else:
+			return HttpResponseBadRequest("The parent assembly does not exist.")
 
+	# Validation on child names
 	childNames = names.split(",")
 	for childName in childNames:
 		if childName not in models.parts:
-			return HttpResponseBadRequest(f"The part {childName} does not exist.")
+			if childName in models.assemblies:
+				return HttpResponseBadRequest(f"The specified part {childName} is an assembly.")
+			else:
+				return HttpResponseBadRequest(f"The part {childName} does not exist.")
 
+	# Make sure all parts exist in the assembly
 	parentAssembly = models.assemblies[parentName]
-	childParts = [models.parts[childName] for childName in childNames]
+	childParts = set([models.parts[childName] for childName in childNames]) # use set to remove dupes
 	for childPart in childParts:
 		if childPart not in parentAssembly.children:
 			return HttpResponseBadRequest( \
 				f"The part {childName} was not found in the first level of the assembly.")
 
+	# Perform removal
 	for childPart in childParts:
 		childPart = models.parts[childName]
 		parentAssembly.children.remove(childPart)
