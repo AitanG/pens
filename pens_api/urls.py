@@ -3,15 +3,15 @@ from . import views
 
 
 urlpatterns = [
-    # create a new part
-    # delete a part (thereby also deleting the part from its parent assemblies)
-    path('part', views.part),
-
     # list all parts
     path('part/', views.listParts),
 
+    # create a new part
+    # delete a part (thereby also deleting the part from its parent assemblies)
+    path('part/<slug:name>', views.part),
+
     # add one or more parts as "children" to a "parent" part, which then becomes an assembly
-    path('part/<slug:parentName>/child/part', views.addPartsToPart),
+    path('part/<slug:parentName>/child/part/<slug:childrenNames>', views.addPartsToPart),
 
     # list all orphan parts (parts with neither parents nor children)
     path('part/orphan/', views.listOrphanParts),
@@ -32,15 +32,15 @@ urlpatterns = [
     path('assembly/subassembly/', views.listSubassemblies),
 
     # list all children of a specific assembly
-    path('assembly/<slug:name>/child/', views.listChildrenOfAssembly),
+    path('assembly/<slug:parentName>/child/', views.listChildrenOfAssembly),
 
     # list all the first-level children of a specific assembly
-    path('assembly/<slug:name>/child/first/', views.listTopChildrenOfAssembly),
-
-    # remove one or more parts from an assembly
-    path('assembly/<slug:name>/child/part', views.removePartsFromAssembly),
+    path('assembly/<slug:parentName>/child/first/', views.listTopChildrenOfAssembly),
 
 	# list all parts in a specific assembly (which are not subassemblies)
-    path('assembly/<slug:name>/child/part/', views.listPartsInAssembly),
+    path('assembly/<slug:parentName>/child/part/', views.listPartsInAssembly),
+
+    # remove one or more parts from an assembly
+    path('assembly/<slug:parentName>/child/part/<childrenNames>', views.removePartsFromAssembly),
 
 ]
