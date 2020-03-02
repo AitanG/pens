@@ -3,7 +3,6 @@ from django.http import *
 from . import models
 import json
 
-# TODO: add method to each comment header
 # TODO: slugs don't take commas
 
 '''
@@ -91,7 +90,7 @@ def getAssembliesContaining(component, assembliesContaining):
 
 
 '''
-API Method
+POST/DELETE Method
 
 URL Path: 'part/<slug:name>'
 
@@ -111,7 +110,7 @@ def part(request, name):
 
 
 '''
-API Method
+GET Method
 
 URL Path: 'part/'
 
@@ -129,7 +128,7 @@ def listParts(request):
 
 
 '''
-API Method
+POST Method
 
 URL Path: 'part/<slug:parentName>/child/part/<slug:childrenNames>'
 
@@ -175,26 +174,7 @@ def addPartsToPart(request, parentName, childrenNames):
 
 
 '''
-API Method
-
-URL Path: 'part/orphan/'
-
-list all orphan parts (parts with neither parents nor children)
-
-'''
-def listOrphanParts(request):
-	if request.method != "GET":
-		return HttpResponseBadRequest()
-
-	# List orphan parts
-	orphanParts = [key for key, value in models.parts.items() if not value.parents]
-	body = json.dumps(orphanParts)
-	response = HttpResponse(body, content_type="application/json")
-	return response
-
-
-'''
-API Method
+GET Method
 
 URL Path: 'part/component/'
 
@@ -213,7 +193,26 @@ def listComponentParts(request):
 
 
 '''
-API Method
+GET Method
+
+URL Path: 'part/orphan/'
+
+list all orphan parts (parts with neither parents nor children)
+
+'''
+def listOrphanParts(request):
+	if request.method != "GET":
+		return HttpResponseBadRequest()
+
+	# List orphan parts
+	orphanParts = [key for key, value in models.parts.items() if not value.parents]
+	body = json.dumps(orphanParts)
+	response = HttpResponse(body, content_type="application/json")
+	return response
+
+
+'''
+GET Method
 
 URL Path: 'part/<slug:name>/assembly/'
 
@@ -240,7 +239,7 @@ def listAssembliesContainingPart(request, name):
 
 
 '''
-API Method
+GET Method
 
 URL Path: 'assembly/'
 
@@ -258,7 +257,7 @@ def listAssemblies(request):
 
 
 '''
-API Method
+GET Method
 
 URL Path: 'assembly/pen/'
 
@@ -277,7 +276,7 @@ def listPens(request):
 
 
 '''
-API Method
+GET Method
 
 URL Path: 'assembly/subassembly/'
 
@@ -296,7 +295,7 @@ def listSubassemblies(request):
 
 
 '''
-API Method
+GET Method
 
 URL Path: 'assembly/<slug:parentName>/child/'
 
@@ -322,7 +321,7 @@ def listChildrenOfAssembly(request, parentName):
 
 
 '''
-API Method
+GET Method
 
 URL Path: 'assembly/<slug:parentName>/child/first/'
 
@@ -346,7 +345,7 @@ def listTopChildrenOfAssembly(request, parentName):
 
 
 '''
-API Method
+GET Method
 
 URL Path: 'assembly/<slug:parentName>/child/part/'
 
@@ -370,7 +369,7 @@ def listPartsInAssembly(request, parentName):
 
 
 '''
-API Method
+DELETE Method
 
 URL Path: 'assembly/<slug:parentName>/child/part/<slug:childrenNames>'
 
@@ -384,7 +383,7 @@ def removePartsFromAssembly(request, parentName, childrenNames):
 	# Validation on parent name
 	if parentName not in models.assemblies:
 		if parentName in models.parts:
-			return HttpResponseBadRequest("The specified parent assembly is a part.")
+			return HttpResponseBadRequest("The parent assembly is a part.")
 		else:
 			return HttpResponseBadRequest("The parent assembly does not exist.")
 

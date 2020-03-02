@@ -13,11 +13,11 @@ urlpatterns = [
     # add one or more parts as "children" to a "parent" part, which then becomes an assembly
     path('part/<slug:parentName>/child/part/<slug:childrenNames>', views.addPartsToPart),
 
-    # list all orphan parts (parts with neither parents nor children)
-    path('part/orphan/', views.listOrphanParts),
-
     # list all component parts (parts that are not subassemblies, but are included in a parent assembly)
     path('part/component/', views.listComponentParts),
+
+    # list all orphan parts (parts with neither parents nor children)
+    path('part/orphan/', views.listOrphanParts),
 
 	# list all assemblies that contain a specific child part, either directly or indirectly (via a subassembly)
     path('part/<slug:name>/assembly/', views.listAssembliesContainingPart),
