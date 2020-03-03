@@ -3,11 +3,9 @@ from django.http import *
 from . import models
 import json
 
-# TODO: slugs don't take commas
 
 '''
 Helper method that validates a request and gets the request params.
-
 '''
 def getRequestParams(request, requiredAttribute=None, requiredAttributes=[]):
 	queryDict = request.POST
@@ -27,11 +25,21 @@ def getRequestParams(request, requiredAttribute=None, requiredAttributes=[]):
 
 
 '''
+Helper method that checks if the provided parent has any children,
+and if so, converts it back into a part.
+'''
+def checkConvertBackToPart(parent):
+	if not parent.children:
+		parent.componentType = "part"
+		del models.assemblies[parent.name]
+		models.parts[parent.name] = parent
+
+
+'''
 Helper method that deletes the part passed into the request body.
 
 Original text:
 delete a part (thereby also deleting the part from its parent assemblies)
-
 '''
 def deletePart(request, name):
 	if name not in models.parts:
@@ -42,6 +50,7 @@ def deletePart(request, name):
 	# Delete the part from its parent assemblies
 	for parent in part.parents:
 		parent.children.remove(part)
+		checkConvertBackToPart(parent)
 
 	# Delete the part from the list of parts
 	del models.parts[part.name]
@@ -54,7 +63,6 @@ Helper method that creates the part passed into the request body.
 
 Original text:
 create a new part
-
 '''
 def createPart(request, name):
 	if name in models.parts:
@@ -68,7 +76,6 @@ def createPart(request, name):
 
 '''
 Helper method that recursively finds all components used to create a parent assembly.
-
 '''
 def getChildrenOfAssembly(parentAssembly, aggregatedChildren):
 	aggregatedChildren.update(parentAssembly.children)
@@ -80,7 +87,6 @@ def getChildrenOfAssembly(parentAssembly, aggregatedChildren):
 
 '''
 Helper method that recursively finds all assemblies containing a component.
-
 '''
 def getAssembliesContaining(component, assembliesContaining):
 	assembliesContaining.update(component.parents)
@@ -92,11 +98,10 @@ def getAssembliesContaining(component, assembliesContaining):
 '''
 POST/DELETE Method
 
-URL Path: 'part/<slug:name>'
+URL Path: 'part/<str:name>'
 
 create a new part
 delete a part (thereby also deleting the part from its parent assemblies)
-
 '''
 def part(request, name):
 	if request.method == "POST":
@@ -115,7 +120,6 @@ GET Method
 URL Path: 'part/'
 
 list all parts
-
 '''
 def listParts(request):
 	if request.method != "GET":
@@ -130,10 +134,9 @@ def listParts(request):
 '''
 POST Method
 
-URL Path: 'part/<slug:parentName>/child/part/<slug:childrenNames>'
+URL Path: 'part/<str:parentName>/child/part/<str:childrenNames>'
 
 add one or more parts as "children" to a "parent" part, which then becomes an assembly
-
 '''
 def addPartsToPart(request, parentName, childrenNames):
 	if request.method != "POST":
@@ -179,7 +182,6 @@ GET Method
 URL Path: 'part/component/'
 
 list all component parts (parts that are not subassemblies, but are included in a parent assembly)
-
 '''
 def listComponentParts(request):
 	if request.method != "GET":
@@ -198,7 +200,6 @@ GET Method
 URL Path: 'part/orphan/'
 
 list all orphan parts (parts with neither parents nor children)
-
 '''
 def listOrphanParts(request):
 	if request.method != "GET":
@@ -214,10 +215,9 @@ def listOrphanParts(request):
 '''
 GET Method
 
-URL Path: 'part/<slug:name>/assembly/'
+URL Path: 'part/<str:name>/assembly/'
 
 list all assemblies that contain a specific child part, either directly or indirectly (via a subassembly)
-
 '''
 def listAssembliesContainingPart(request, name):
 	if request.method != "GET":
@@ -244,14 +244,13 @@ GET Method
 URL Path: 'assembly/'
 
 list all assemblies
-
 '''
 def listAssemblies(request):
 	if request.method != "GET":
 		return HttpResponseBadRequest()
 
 	# List assemblies
-	body = json.dumps(models.assemblies.keys())
+	body = json.dumps(list(models.assemblies.keys()))
 	response = HttpResponse(body, content_type="application/json")
 	return response
 
@@ -262,7 +261,6 @@ GET Method
 URL Path: 'assembly/pen/'
 
 list all top level assemblies (assemblies that are not children of another assembly)
-
 '''
 def listPens(request):
 	if request.method != "GET":
@@ -281,7 +279,6 @@ GET Method
 URL Path: 'assembly/subassembly/'
 
 list all subassemblies (assemblies that are children of another assembly)
-
 '''
 def listSubassemblies(request):
 	if request.method != "GET":
@@ -297,10 +294,9 @@ def listSubassemblies(request):
 '''
 GET Method
 
-URL Path: 'assembly/<slug:parentName>/child/'
+URL Path: 'assembly/<str:parentName>/child/'
 
 list all children of a specific assembly
-
 '''
 def listChildrenOfAssembly(request, parentName):
 	if request.method != "GET":
@@ -323,10 +319,9 @@ def listChildrenOfAssembly(request, parentName):
 '''
 GET Method
 
-URL Path: 'assembly/<slug:parentName>/child/first/'
+URL Path: 'assembly/<str:parentName>/child/first/'
 
 list all the first-level children of a specific assembly
-
 '''
 def listTopChildrenOfAssembly(request, parentName):
 	if request.method != "GET":
@@ -347,10 +342,9 @@ def listTopChildrenOfAssembly(request, parentName):
 '''
 GET Method
 
-URL Path: 'assembly/<slug:parentName>/child/part/'
+URL Path: 'assembly/<str:parentName>/child/part/'
 
 list all parts in a specific assembly (which are not subassemblies)
-
 '''
 def listPartsInAssembly(request, parentName):
 	if request.method != "GET":
@@ -371,10 +365,9 @@ def listPartsInAssembly(request, parentName):
 '''
 DELETE Method
 
-URL Path: 'assembly/<slug:parentName>/child/part/<slug:childrenNames>'
+URL Path: 'assembly/<str:parentName>/child/part/<str:childrenNames>'
 
 remove one or more parts from an assembly
-
 '''
 def removePartsFromAssembly(request, parentName, childrenNames):
 	if request.method != "DELETE":
@@ -388,7 +381,7 @@ def removePartsFromAssembly(request, parentName, childrenNames):
 			return HttpResponseBadRequest("The parent assembly does not exist.")
 
 	# Validation on child names
-	childNames = names.split(",")
+	childNames = childrenNames.split(",")
 	for childName in childNames:
 		if childName not in models.parts:
 			if childName in models.assemblies:
@@ -408,5 +401,7 @@ def removePartsFromAssembly(request, parentName, childrenNames):
 	for childPart in childParts:
 		childPart = models.parts[childName]
 		parentAssembly.children.remove(childPart)
+		childPart.parents.remove(parentAssembly)
+		checkConvertBackToPart(parentAssembly)
 
 	return HttpResponse()
