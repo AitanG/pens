@@ -258,11 +258,11 @@ def listAssemblies(request):
 '''
 GET Method
 
-URL Path: 'assembly/pen/'
+URL Path: 'assembly/top/'
 
 list all top level assemblies (assemblies that are not children of another assembly)
 '''
-def listPens(request):
+def listTop(request):
 	if request.method != "GET":
 		return HttpResponseBadRequest()
 
@@ -354,10 +354,14 @@ def listPartsInAssembly(request, parentName):
 	if parentName not in models.assemblies:
 		return HttpResponseBadRequest("The parent assembly does not exist.")
 
-	# List parts
 	parentAssembly = models.assemblies[parentName]
-	childNames = [child.name for child in parentAssembly.children if child.componentType == "part"]
-	body = json.dumps(childNames)
+
+	# Populate set of children using recursive function call and return
+	children = set([])
+	getChildrenOfAssembly(parentAssembly, children)
+
+	# Filter by which children are parts
+	body = json.dumps([child.name for child in children if child.name in models.parts])
 	response = HttpResponse(body, content_type="application/json")
 	return response
 
@@ -399,7 +403,6 @@ def removePartsFromAssembly(request, parentName, childrenNames):
 
 	# Perform removal
 	for childPart in childParts:
-		childPart = models.parts[childName]
 		parentAssembly.children.remove(childPart)
 		childPart.parents.remove(parentAssembly)
 		checkConvertBackToPart(parentAssembly)

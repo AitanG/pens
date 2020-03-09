@@ -15,6 +15,12 @@ TODO: add a complete description of the project and how to use it here.
 
 ### Design Decisions
 
+### Key Files
+
+  * `pens_api/views.py`: Defines all API methods, as well as some helper functions
+  * `pens_api/urls.py`: URL dispatcher which connects URLs in requests to the relevant API methods
+  * `pens_api/models.py`: Holds all pen-related data in memory
+  * `demo.py`: Independently runnable code that demonstrates the API's functionality
 
 ## Startup Guide
 
@@ -135,7 +141,7 @@ List all known assemblies.
 
 List all assemblies that are never used in any other assemblies.
 
-**URL:** `assembly/pen/`
+**URL:** `assembly/top/`
 
 **Method:** `GET`
 

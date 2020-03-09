@@ -15,10 +15,10 @@ class SimpleTest(TestCase):
 	def testCreateDeletePart(self):
 		reset()
 
-		response = self.c.post('/pens/part/barrel-bottom')
+		response = self.c.post('/pens/part/barrel%20bottom')
 		self.assertEqual(response.status_code, 200)
 
-		response = self.c.post('/pens/part/barrel-bottom')
+		response = self.c.post('/pens/part/barrel%20bottom')
 		self.assertEqual(response.status_code, 400)
 
 		self.c.post('/pens/part/engine')
@@ -31,25 +31,25 @@ class SimpleTest(TestCase):
 	def testAddRemoveParts(self):
 		reset()
 
-		self.c.post('/pens/part/ink-cartridge')
+		self.c.post('/pens/part/ink%20cartridge')
 		self.c.post('/pens/part/ink')
 
 		# Add part to assembly
-		response = self.c.post('/pens/part/ink-cartridge/child/part/ink')
+		response = self.c.post('/pens/part/ink%20cartridge/child/part/ink')
 		self.assertEqual(response.status_code, 200)
 
 		response = self.c.get('/pens/assembly/')
-		self.assertEqual(response.content, b'["ink-cartridge"]')
+		self.assertEqual(response.content, b'["ink%20cartridge"]')
 
-		response = self.c.get('/pens/assembly/ink-cartridge/child/')
+		response = self.c.get('/pens/assembly/ink%20cartridge/child/')
 		self.assertEqual(response.content, b'["ink"]')
 
 		# Remove part from assembly
-		response = self.c.delete('/pens/assembly/ink-cartridge/child/part/ink')
+		response = self.c.delete('/pens/assembly/ink%20cartridge/child/part/ink')
 		self.assertEqual(response.status_code, 200)
 
 		# Add the part back to the assembly
-		response = self.c.post('/pens/part/ink-cartridge/child/part/ink')
+		response = self.c.post('/pens/part/ink%20cartridge/child/part/ink')
 		self.assertEqual(response.status_code, 200)
 
 		# Now delete the part
@@ -60,10 +60,10 @@ class SimpleTest(TestCase):
 		response = self.c.get('/pens/part/')
 		self.assertEqual('"ink"' not in str(response.content), True)
 
-		# Make sure the ink-cartridge is no longer considered an assembly
-		response = self.c.get('/pens/assembly/ink-cartridge/child/')
+		# Make sure the ink%20cartridge is no longer considered an assembly
+		response = self.c.get('/pens/assembly/ink%20cartridge/child/')
 		self.assertEqual(response.content, b'The parent assembly does not exist.')
 
 		response = self.c.get('/pens/part/')
-		self.assertEqual('"ink-cartridge"' in str(response.content), True)
+		self.assertEqual('"ink%20cartridge"' in str(response.content), True)
 

@@ -26,7 +26,7 @@ urlpatterns = [
 	path('assembly/', views.listAssemblies),
 
     # list all top level assemblies (assemblies that are not children of another assembly)
-    path('assembly/pen/', views.listPens),
+    path('assembly/top/', views.listTop),
 
     # list all subassemblies (assemblies that are children of another assembly)
     path('assembly/subassembly/', views.listSubassemblies),
