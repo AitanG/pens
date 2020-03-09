@@ -32,7 +32,9 @@ In addition to the required methods, there are two related methods which output 
 
 This feature might be a useful way for the user to visualize their database of bills of materials or visualize the construction of a particular pen. Additionally, the JSON option allows any client to define their own preferred `GET` functionality for front-end apps, like visualization tools, more advanced logical queries, and typeaheads / information retrieval purposes.
 
-Each time a change is made (i.e., a `POST` or `DELETE` request is made), both the plain text and JSON hierarchy representations are recompiled. This is because with this particular application, we can expect queries to be predominantly `GET`s, and it would be wasteful to recompile the hierarchies every time someone requests to see them. Even though we can expect relatively few `POST` and `DELETE` requests, this functionality is made to have a minimal impact on the performance of these requests with the use of multi-threading. Each time the database is updated, a new thread is spun off which asynchronously recompiles the hierarchies after the request returns, and any existing threads are killed to avoid race conditions. This means any subsequent calls to Display Hierarchy Text/JSON might not be completely up-to-date, but should work for all intents and purposes.
+Each time a change is made (i.e., a `POST` or `DELETE` request is made), both the plain text and JSON hierarchy representations are recompiled. This is because with this particular application, we can expect queries to be predominantly `GET`s, and it would be wasteful to recompile the hierarchies every time someone requests to see them.
+
+Even though we can expect relatively few `POST` and `DELETE` requests, this functionality is made to have a minimal impact on the performance of these requests with the use of multi-threading. Each time the database is updated, a new thread is spun off which asynchronously recompiles the hierarchies after the request returns, and any existing threads are killed to avoid race conditions. This means any subsequent calls to Display Hierarchy Text/JSON might not be completely up-to-date, but should work for all intents and purposes.
 
 ### Key Files
 
@@ -57,7 +59,7 @@ The first command installs the Python library Django, which provides all the dep
 To test the API functionality, use the client of your choice using the domain `http://localhost:8000`. Browsers automatically send requests with the `GET` method, but for `POST` and `DELETE` requests, you have to use a different type of client, like Postman. As an example, to list all known parts, make the following `GET` request:
 
 ```
-`http://localhost:8000/part/
+http://localhost:8000/part/
 ```
 
 The Python script named `demo.py` demonstrates the API's functionality by creating two different models of pen and two colors of each model, and performing a series of `GET` queries on the bills of materials. In order to run the script, you must have the Python library `requests` installed.
