@@ -12,21 +12,23 @@ This repository has the code to run a server that hosts an API for bills of mate
 *  **Add Children Parts to Parent** only accepts parts, which means pens are "constructed" top-down rather than bottom-up.
 *  Component names don't contain commas.
 *  **Remove Parts From Assembly** only looks at the parts directly used to make that assembly, and does not work for subassemblies.
+*  Duplicates of parts in the same assembly are not allowed.
+*  Whether or not a part is the same color as the pen is a universal property of the part, so that specifying the pen's color specifies each constituent part's color.
 
 ### Design Decisions
 
   * The URL scheme is clearly orgnized according to the best practices of API design, and is meant to be self-descriptive. See **API Documentation** below.
   * The code is organized as a Django project, which separates URL dispatch, function definition, unit tests, models, and settings into different files.
   * All data structures are held in-memory, since this particular application has modest capacity demands. This simplifies the design and improves performance.
-  * All pen-related data is primarily referenced via JSON-like Python dictionaries, one containing assemblies and one containing parts. This is because most of the requests make clear distinctions between parts and assemblies, with the exception of requests like List Children.
-  * Parts and assemblies can also be referenced in relation to each other through the members of the Component class, which all components belong to. A Component lists all of its parents and children (if they exist) in a tree-like fashion, and has a name and component type. Requests like List Children take advantage of this tree-like organization, and the `POST` and `DELETE` features are able to efficiently and concisely keep parent and child lists up-to-date.
+  * All pen-related data is primarily referenced via JSON-like Python dictionaries, one containing assemblies and one containing parts. This is because most of the requests make clear distinctions between parts and assemblies, with the exception of requests like **List Children**.
+  * Parts and assemblies can also be referenced in relation to each other through the members of the Component class, which all components belong to. A Component lists all of its parents and children (if they exist) in a tree-like fashion, and has a name and component type. Requests like **List Children** take advantage of this tree-like organization, and the `POST` and `DELETE` features are able to efficiently and concisely keep parent and child lists up-to-date.
 
 ### Extension
 
 In addition to the required methods, there are two related methods which output the full hierarchy of each bill of materials--one method is JSON-encoded and the other method is a multi-level, human-readable bullet point list. Search below for the following:
 
-  * Display Hierarchy Text
-  * Display Hierarchy JSON
+  * **Display Hierarchy Text**
+  * **Display Hierarchy JSON**
 
 This feature might be a useful way for the user to visualize their database of bills of materials or visualize the construction of a particular pen. Additionally, the JSON option allows any client to define their own preferred `GET` functionality for front-end apps, like visualization tools, more advanced logical queries, and typeaheads / information retrieval purposes.
 
