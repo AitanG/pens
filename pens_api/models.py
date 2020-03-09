@@ -8,3 +8,7 @@ class Component:
 
 parts = {} # maps name to Component object
 assemblies = {} # maps name to Component object
+hierarchy = {
+	"text": "",
+	"json": ""
+}

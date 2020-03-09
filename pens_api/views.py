@@ -1,7 +1,19 @@
+'''
+Libraries
+'''
 from django.shortcuts import render
 from django.http import *
 from . import models
 import json
+import threading
+
+
+'''
+Thread index global variable: ensures one background operation at a time
+'''
+threads = {
+	"activeThreadIndex": 0,
+}
 
 
 '''
@@ -55,6 +67,9 @@ def deletePart(request, name):
 	# Delete the part from the list of parts
 	del models.parts[part.name]
 
+	t = threading.Thread(target=reprintHierarchy)
+	t.start()
+
 	return HttpResponse()
 
 
@@ -71,6 +86,9 @@ def createPart(request, name):
 	part = models.Component(name, componentType="part")
 	models.parts[name] = part
 
+	t = threading.Thread(target=reprintHierarchy)
+	t.start()
+
 	return HttpResponse()
 
 
@@ -83,6 +101,50 @@ def getChildrenOfAssembly(parentAssembly, aggregatedChildren):
 	childrenAssemblies = [child for child in parentAssembly.children if child.componentType == "assembly"]
 	for child in childrenAssemblies:
 		getChildrenOfAssembly(child, aggregatedChildren)
+
+
+'''
+Helper method that recursively displays the contents of a top-level assembly in order.
+'''
+def reprintHierarchy():
+	threads["activeThreadIndex"] += 1
+	index = threads["activeThreadIndex"]
+
+	def displayChildrenOfAssembly(parentAssembly, pyDict, level=1, text=""):
+		# Sanity check for infinite recursion
+		if level > 100:
+			return
+
+		for child in parentAssembly.children:
+			if index != threads["activeThreadIndex"]:
+				# A new update has been made, so kill and reprint hierarchy from scratch
+				return
+
+			text += ('\t' * level) + "- " + child.name + '\n'
+			if child.componentType == "assembly":
+				d = {}
+				t = displayChildrenOfAssembly(child, d, level + 1, text)
+				pyDict[child.name] = d
+				text += t
+
+		return text
+
+	resultText = ""
+	resultDict = {}
+	topAssemblies = [value for key, value in models.assemblies.items() if not value.parents]
+	for topAssembly in topAssemblies:
+		pyDict = {}
+		resultText += f"{topAssembly.name}\n"
+		resultText += displayChildrenOfAssembly(topAssembly, pyDict)
+		resultDict[topAssembly.name] = pyDict
+
+	if index != threads["activeThreadIndex"]:
+		# A new update has been made, so kill and reprint hierarchy from scratch
+		return
+
+	# Atomic assignment commands ensure that hierarchy GETs print a full record
+	models.hierarchy["text"] = resultText
+	models.hierarchy["json"] = json.dumps(resultDict)
 
 
 '''
@@ -172,6 +234,9 @@ def addPartsToPart(request, parentName, childrenNames):
 		childPart = models.parts[childName]
 		parentPart.children.append(childPart)
 		childPart.parents.append(parentPart)
+
+	t = threading.Thread(target=reprintHierarchy)
+	t.start()
 
 	return HttpResponse()
 
@@ -407,4 +472,37 @@ def removePartsFromAssembly(request, parentName, childrenNames):
 		childPart.parents.remove(parentAssembly)
 		checkConvertBackToPart(parentAssembly)
 
+	t = threading.Thread(target=reprintHierarchy)
+	t.start()
+
 	return HttpResponse()
+
+
+'''
+GET Method
+
+URL Path: 'hierarchy-text'
+
+Display a text rendering of the full hierarchy of each top-level assembly
+'''
+def displayHierarchyText(request):
+	if request.method != "GET":
+		return HttpResponseBadRequest()
+
+	response = HttpResponse(models.hierarchy["text"], content_type="text/html")
+	return response
+
+
+'''
+GET Method
+
+URL Path: 'hierarchy-json'
+
+Display a JSON object representing full hierarchy of each top-level assembly
+'''
+def displayHierarchyJson(request):
+	if request.method != "GET":
+		return HttpResponseBadRequest()
+
+	response = HttpResponse(models.hierarchy["json"], content_type="application/json")
+	return response

@@ -43,4 +43,9 @@ urlpatterns = [
     # remove one or more parts from an assembly
     path('assembly/<str:parentName>/child/part/<childrenNames>', views.removePartsFromAssembly),
 
+    # Display a text rendering of the full hierarchy of each top-level assembly
+    path('hierarchy-text', views.displayHierarchyText),
+
+    # Display a JSON object representing full hierarchy of each top-level assembly
+    path('hierarchy-json', views.displayHierarchyJson)
 ]

@@ -176,3 +176,9 @@ r = requests.get(f"{BASE_URL}/pens/assembly/blue%20plastic%20pen/child/")
 for item in r.json():
 	print(item)
 print("")
+
+print("Display Hierarchy")
+print(DIVIDER)
+r = requests.get(f"{BASE_URL}/pens/hierarchy")
+print(r.text)
+print("")
