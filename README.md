@@ -62,7 +62,11 @@ To test the API functionality, use the client of your choice using the domain `h
 http://localhost:8000/part/
 ```
 
-The Python script named `demo.py` demonstrates the API's functionality by creating two different models of pen and two colors of each model, and performing a series of `GET` queries on the bills of materials. In order to run the script, you must have the Python library `requests` installed.
+The Python script named `demo.py` demonstrates the API's functionality by creating two different models of pen and two colors of each model, and performing a series of `GET` queries on the bills of materials. In order to run the script, you must have the Python library `requests` installed, and the server must be up and running on your machine. To see the demonstration, navigate to the root of this repository in a new console window and run the following command:
+
+```
+python demo.py
+```
 
 Any changes you make through the API will *not* persist through server restarts.
 
